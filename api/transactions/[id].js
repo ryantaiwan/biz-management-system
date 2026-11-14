@@ -1,10 +1,8 @@
 const { query, queryOne } = require('../../lib/db');
-
-function send(res, code, data) {
-  res.status(code).json(data);
-}
+const { send, handleOptions } = require('../../lib/helper');
 
 module.exports = async (req, res) => {
+  if (handleOptions(req, res)) return;
   const method = req.method;
   const id = req.query.id;
 
@@ -22,12 +20,9 @@ module.exports = async (req, res) => {
       await query(
         `UPDATE transactions SET type=?, amount=?, category=?, description=?, tx_date=?, updated_at=datetime('now','localtime') WHERE id=?`,
         [
-          type ?? existing.type,
-          amount !== undefined ? Number(amount) : existing.amount,
-          category ?? existing.category,
-          description ?? existing.description,
-          tx_date ?? existing.tx_date,
-          id
+          type ?? existing.type, amount !== undefined ? Number(amount) : existing.amount,
+          category ?? existing.category, description ?? existing.description,
+          tx_date ?? existing.tx_date, id
         ]
       );
       const row = await queryOne('SELECT * FROM transactions WHERE id = ?', [id]);

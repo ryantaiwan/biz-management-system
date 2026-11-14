@@ -1,10 +1,8 @@
 const { query, queryOne } = require('../../lib/db');
-
-function send(res, code, data) {
-  res.status(code).json(data);
-}
+const { send, handleOptions } = require('../../lib/helper');
 
 module.exports = async (req, res) => {
+  if (handleOptions(req, res)) return;
   const method = req.method;
   const id = req.query.id;
 

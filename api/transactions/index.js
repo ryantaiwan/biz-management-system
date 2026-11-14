@@ -1,10 +1,8 @@
-const { query, queryOne } = require('../../lib/db');
-
-function send(res, code, data) {
-  res.status(code).json(data);
-}
+const { query, queryOne } = require('../lib/db');
+const { send, handleOptions } = require('../lib/helper');
 
 module.exports = async (req, res) => {
+  if (handleOptions(req, res)) return;
   const method = req.method;
 
   try {
@@ -16,10 +14,7 @@ module.exports = async (req, res) => {
 
       let where = '';
       let params = [];
-      if (type) {
-        where = 'WHERE type = ?';
-        params = [type];
-      }
+      if (type) { where = 'WHERE type = ?'; params = [type]; }
 
       const countResult = await query(`SELECT COUNT(*) as total FROM transactions ${where}`, params);
       const rowsResult = await query(
