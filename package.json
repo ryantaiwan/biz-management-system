@@ -1,0 +1,18 @@
+{
+  "name": "biz-management-system",
+  "version": "1.0.0",
+  "description": "生意管理系統 - 庫存、客戶、記帳、財務 (Node.js + SQLite/Turso)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "vercel-dev": "vercel dev",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "better-sqlite3": "^11.3.0",
+    "@libsql/client": "^0.14.0",
+    "cors": "^2.8.5"
+  }
+}

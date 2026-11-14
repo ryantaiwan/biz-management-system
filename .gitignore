@@ -1,0 +1,11 @@
+node_modules/
+data.db
+data.db-wal
+data.db-shm
+.env
+.env.local
+.vercel
+.workbuddy-ai/
+*.genie
+index_old_localstorage.html
+index1112.html

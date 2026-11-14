@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生意管理系統</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d28;
+  --surface-hover: #232735;
+  --border: #2d3140;
+  --text: #e4e6eb;
+  --text-dim: #8b8f9a;
+  --primary: #4f8cff;
+  --primary-hover: #3a78f0;
+  --red: #ff4d4f;
+  --green: #52c41a;
+  --orange: #faad14;
+  --purple: #9254de;
+  --radius: 8px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: fixed; left:0; top:0; bottom:0; width:220px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  z-index: 100;
+}
+.sidebar-header { padding: 20px 16px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sidebar-header .logo { font-size: 24px; }
+.sidebar-header p { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.sidebar-nav { flex: 1; padding: 12px 8px; overflow-y: auto; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: var(--radius);
+  cursor: pointer; transition: background .15s;
+  font-size: 14px; color: var(--text-dim); margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--surface-hover); color: var(--text); }
+.nav-item.active { background: var(--primary); color: #fff; }
+.nav-item .icon { font-size: 18px; width: 20px; text-align: center; }
+.sidebar-footer {
+  padding: 12px 16px; border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--text-dim);
+}
+.db-status { display: flex; align-items: center; gap: 8px; }
+.db-status .dot { width:8px; height:8px; border-radius:50%; background: var(--green); }
+
+.main { margin-left: 220px; padding: 24px 32px; min-height: 100vh; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.page-header h2 { font-size: 22px; font-weight: 700; }
+.page-header .actions { display: flex; gap: 8px; }
+
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
+}
+.stat-card .label { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+.stat-card .value { font-size: 28px; font-weight: 700; }
+.stat-card .sub { font-size: 12px; margin-top: 4px; }
+.stat-card.income .value { color: var(--red); }
+.stat-card.expense .value { color: var(--green); }
+.stat-card.balance .value { color: var(--primary); }
+.stat-card.inventory .value { color: var(--orange); }
+
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+}
+.table-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.table-toolbar .search { display: flex; align-items: center; gap: 8px; }
+.table-toolbar input {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 6px 12px;
+  color: var(--text); font-size: 13px; width: 200px;
+}
+.table-toolbar input:focus { outline: none; border-color: var(--primary); }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 12px 18px; text-align: left; font-size: 13px; border-bottom: 1px solid var(--border); }
+th { color: var(--text-dim); font-weight: 600; white-space: nowrap; }
+td .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.tag.in { background: rgba(82,196,26,.15); color: var(--green); }
+.tag.out { background: rgba(255,77,79,.15); color: var(--red); }
+.tag.low { background: rgba(250,173,20,.15); color: var(--orange); }
+tbody tr:hover { background: var(--surface-hover); }
+.row-actions { display: flex; gap: 6px; }
+.row-actions button {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-dim); font-size: 14px;
+  padding: 2px 6px; border-radius: 4px;
+}
+.row-actions button:hover { background: var(--bg); color: var(--text); }
+.row-actions button.del:hover { color: var(--red); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius); border: none;
+  cursor: pointer; font-size: 13px; font-weight: 500; transition: all .15s;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--text-dim); }
+.btn-danger { background: rgba(255,77,79,.15); color: var(--red); }
+.btn-danger:hover { background: rgba(255,77,79,.25); }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: none; align-items: center; justify-content: center; z-index: 200;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; width: 480px; max-width: 92vw;
+  max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+.modal-header {
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+  font-size: 16px; font-weight: 600;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-header .close { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 20px; }
+.modal-body { padding: 22px; }
+.modal-footer {
+  padding: 16px 22px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 9px 12px;
+  color: var(--text); font-size: 14px;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-group textarea { resize: vertical; min-height: 60px; }
+
+.toast-wrap {
+  position: fixed; top: 20px; right: 20px; z-index: 300;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 18px;
+  font-size: 13px; box-shadow: var(--shadow);
+  animation: slideIn .2s ease; max-width: 320px;
+}
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+.toast.info { border-left: 3px solid var(--primary); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.chart-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 24px; box-shadow: var(--shadow);
+}
+.chart-wrap h3 { font-size: 15px; margin-bottom: 16px; }
+.chart-bars {
+  display: flex; align-items: flex-end; gap: 4px;
+  height: 160px; padding-bottom: 24px;
+  border-bottom: 1px solid var(--border); position: relative;
+}
+.chart-bar { flex: 1; min-width: 20px; border-radius: 4px 4px 0 0; position: relative; cursor: pointer; transition: opacity .15s; }
+.chart-bar:hover { opacity: .8; }
+.chart-bar .label {
+  position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; color: var(--text-dim);
+}
+.chart-legend { display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: var(--text-dim); }
+.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 14px; }
+.pagination button {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 4px; padding: 4px 10px;
+  color: var(--text-dim); cursor: pointer; font-size: 13px;
+}
+.pagination button:hover { color: var(--text); }
+.pagination button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.pagination button:disabled { opacity: .4; cursor: not-allowed; }
+
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; margin-bottom: 16px; }
+
+.content-section { display: none; }
+.content-section.active { display: block; }
+
+@media (max-width: 768px) {
+  .sidebar { width: 60px; }
+  .sidebar-header h1, .sidebar-header p, .nav-item span:not(.icon), .sidebar-footer { display: none; }
+  .main { margin-left: 60px; padding: 16px; }
+  .form-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1><span class="logo">📊</span> 生意管理</h1>
+    <p>庫存 · 客戶 · 記帳 · 財務</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
+      <span class="icon">🏠</span><span>儀表板</span>
+    </div>
+    <div class="nav-item" data-page="inventory" onclick="switchPage('inventory')">
+      <span class="icon">📦</span><span>庫存管理</span>
+    </div>
+    <div class="nav-item" data-page="customers" onclick="switchPage('customers')">
+      <span class="icon">👥</span><span>客戶管理</span>
+    </div>
+    <div class="nav-item" data-page="accounting" onclick="switchPage('accounting')">
+      <span class="icon">💰</span><span>記帳</span>
+    </div>
+    <div class="nav-item" data-page="finance" onclick="switchPage('finance')">
+      <span class="icon">📈</span><span>財務概覽</span>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="db-status">
+      <span class="dot"></span>
+      <span>better-sqlite3 已連接</span>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="content-section active" id="page-dashboard">
+    <div class="page-header"><h2>儀表板</h2></div>
+    <div class="stats-grid">
+      <div class="stat-card income">
+        <div class="label">本月收入</div>
+        <div class="value" id="dashIncome">¥0</div>
+        <div class="sub" id="dashIncomeSub">--</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="label">本月支出</div>
+        <div class="value" id="dashExpense">¥0</div>
+        <div class="sub" id="dashExpenseSub">--</div>
+      </div>
+      <div class="stat-card balance">
+        <div class="label">本月淨利</div>
+        <div class="value" id="dashBalance">¥0</div>
+        <div class="sub" id="dashBalanceSub">--</div>
+      </div>
+      <div class="stat-card inventory">
+        <div class="label">庫存品項</div>
+        <div class="value" id="dashInventory">0</div>
+        <div class="sub" id="dashInventorySub">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">客戶總數</div>
+        <div class="value" id="dashCustomers" style="color:var(--purple)">0</div>
+        <div class="sub">活躍客戶</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">低庫存預警</div>
+        <div class="value" id="dashLowStock" style="color:var(--red)">0</div>
+        <div class="sub">需補貨</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <h3>近 6 個月收支趨勢</h3>
+      <div class="chart-bars" id="dashChart"></div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:var(--red)"></span>收入</span>
+        <span><span class="legend-dot" style="background:var(--green)"></span>支出</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-section" id="page-inventory">
+    <div class="page-header">
+      <h2>📦 庫存管理</h2>
+      <div class="actions"><button class="btn btn-primary" onclick="openModal('inventory')">＋ 新增商品</button></div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <div class="search"><input type="text" id="invSearch" placeholder="搜尋商品名稱..." oninput="debounceSearch('inventory')"></div>
+        <div style="font-size:12px;color:var(--text-dim)" id="invCount">0 項</div>
+      </div>
+      <table>
+        <thead><tr><th>商品名稱</th><th>分類</th><th>庫存數量</th><th>單位</th><th>單價</th><th>狀態</th><th>操作</th></tr></thead>
+        <tbody id="invBody"></tbody>
+      </table>
+      <div class="pagination" id="invPagination"></div>
+    </div>
+  </div>
+
+  <div class="content-section" id="page-customers">
+    <div class="page-header">
+      <h2>👥 客戶管理</h2>
+      <div class="actions"><button class="btn btn-primary" onclick="openModal('customer')">＋ 新增客戶</button></div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <div class="search"><input type="text" id="custSearch" placeholder="搜尋客戶名稱或電話..." oninput="debounceSearch('customers')"></div>
+        <div style="font-size:12px;color:var(--text-dim)" id="custCount">0 項</div>
+      </div>
+      <table>
+        <thead><tr><th>客戶名稱</th><th>電話</th><th>郵箱</th><th>地址</th><th>備註</th><th>操作</th></tr></thead>
+        <tbody id="custBody"></tbody>
+      </table>
+      <div class="pagination" id="custPagination"></div>
+    </div>
+  </div>
+
+  <div class="content-section" id="page-accounting">
+    <div class="page-header">
+      <h2>💰 記帳</h2>
+      <div class="actions"><button class="btn btn-primary" onclick="openModal('transaction')">＋ 新增帳目</button></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card income"><div class="label">本月收入</div><div class="value" id="accIncome">¥0</div></div>
+      <div class="stat-card expense"><div class="label">本月支出</div><div class="value" id="accExpense">¥0</div></div>
+      <div class="stat-card balance"><div class="label">本月結餘</div><div class="value" id="accBalance">¥0</div></div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <div class="search">
+          <select id="accFilter" onchange="loadTransactions()" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;color:var(--text);font-size:13px">
+            <option value="">全部</option>
+            <option value="income">收入</option>
+            <option value="expense">支出</option>
+          </select>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim)" id="accCount">0 筆</div>
+      </div>
+      <table>
+        <thead><tr><th>日期</th><th>類型</th><th>分類</th><th>金額</th><th>說明</th><th>操作</th></tr></thead>
+        <tbody id="accBody"></tbody>
+      </table>
+      <div class="pagination" id="accPagination"></div>
+    </div>
+  </div>
+
+  <div class="content-section" id="page-finance">
+    <div class="page-header"><h2>📈 財務概覽</h2></div>
+    <div class="stats-grid">
+      <div class="stat-card income"><div class="label">總收入</div><div class="value" id="finTotalIncome">¥0</div></div>
+      <div class="stat-card expense"><div class="label">總支出</div><div class="value" id="finTotalExpense">¥0</div></div>
+      <div class="stat-card balance"><div class="label">淨利潤</div><div class="value" id="finNetProfit">¥0</div></div>
+    </div>
+    <div class="chart-wrap">
+      <h3>近 12 個月收支趨勢</h3>
+      <div class="chart-bars" id="finChart"></div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:var(--red)"></span>收入</span>
+        <span><span class="legend-dot" style="background:var(--green)"></span>支出</span>
+        <span><span class="legend-dot" style="background:var(--primary)"></span>淨利</span>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <h3>支出分類佔比</h3>
+      <div id="finCategoryBreakdown" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="modalTitle">新增</span>
+      <button class="close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" id="modalSave" onclick="saveModal()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const API = '';
+const INCOME_CATEGORIES = ['銷售收入', '服務收入', '投資收益', '其他收入'];
+const EXPENSE_CATEGORIES = ['進貨成本', '人事費用', '租金水電', '行銷廣告', '辦公用品', '稅費', '其他支出'];
+const INVENTORY_CATEGORIES = ['食品', '飲料', '日用品', '電子產品', '服飾', '文具', '其他'];
+
+let currentPage = { inventory: 1, customers: 1, accounting: 1 };
+const pageSize = 15;
+let editingType = null;
+let editingId = null;
+let searchTimers = {};
+
+// === API helpers ===
+async function api(path, options = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Request failed');
+  }
+  return res.json();
+}
+
+function debounceSearch(section) {
+  clearTimeout(searchTimers[section]);
+  searchTimers[section] = setTimeout(() => {
+    currentPage[section] = 1;
+    if (section === 'inventory') loadInventory();
+    else if (section === 'customers') loadCustomers();
+  }, 300);
+}
+
+// === Page switching ===
+function switchPage(page) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+  document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (page === 'dashboard') loadDashboard();
+  else if (page === 'inventory') loadInventory();
+  else if (page === 'customers') loadCustomers();
+  else if (page === 'accounting') loadTransactions();
+  else if (page === 'finance') loadFinance();
+}
+
+// === Dashboard ===
+async function loadDashboard() {
+  try {
+    const d = await api('/api/dashboard');
+    document.getElementById('dashIncome').textContent = '¥' + formatNum(d.income);
+    document.getElementById('dashExpense').textContent = '¥' + formatNum(d.expense);
+    document.getElementById('dashBalance').textContent = '¥' + formatNum(d.balance);
+    document.getElementById('dashIncomeSub').textContent = d.incomeCount + ' 筆收入';
+    document.getElementById('dashExpenseSub').textContent = d.expenseCount + ' 筆支出';
+    document.getElementById('dashBalanceSub').textContent = d.balance >= 0 ? '盈利' : '虧損';
+    document.getElementById('dashInventory').textContent = d.inventoryCount;
+    document.getElementById('dashInventorySub').textContent = '庫存價值 ¥' + formatNum(d.stockValue);
+    document.getElementById('dashCustomers').textContent = d.customerCount;
+    document.getElementById('dashLowStock').textContent = d.lowStockCount;
+    renderTrendChart('dashChart', d.trend, 6);
+  } catch (e) {
+    toast('載入儀表板失敗: ' + e.message, 'error');
+  }
+}
+
+function renderTrendChart(elementId, trendData, maxMonths) {
+  const now = new Date();
+  const chartData = [];
+  for (let i = maxMonths - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    const found = (trendData || []).find(r => r.month === key);
+    chartData.push({
+      label: (d.getMonth()+1) + '月',
+      income: found ? found.income : 0,
+      expense: found ? found.expense : 0
+    });
+  }
+  const maxVal = Math.max(...chartData.map(d => Math.max(d.income, d.expense)), 1);
+  const container = document.getElementById(elementId);
+  container.innerHTML = '';
+  chartData.forEach(d => {
+    const incH = (d.income / maxVal) * 140;
+    const expH = (d.expense / maxVal) * 140;
+    container.innerHTML += `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+        <div class="chart-bar" style="background:var(--red);height:${incH}px;width:60%" title="收入 ¥${formatNum(d.income)}"></div>
+        <div class="chart-bar" style="background:var(--green);height:${expH}px;width:60%" title="支出 ¥${formatNum(d.expense)}"></div>
+        <div class="label">${d.label}</div>
+      </div>`;
+  });
+}
+
+// === Inventory ===
+async function loadInventory() {
+  const search = document.getElementById('invSearch').value.trim();
+  const page = currentPage.inventory;
+  try {
+    const res = await api(`/api/inventory?search=${encodeURIComponent(search)}&page=${page}&limit=${pageSize}`);
+    const tbody = document.getElementById('invBody');
+    tbody.innerHTML = '';
+    if (!res.data || res.data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📦</div><p>暫無庫存資料</p><button class="btn btn-primary" onclick="openModal('inventory')">新增商品</button></div></td></tr>`;
+    } else {
+      res.data.forEach(r => {
+        const stock = Number(r.stock || 0);
+        const minStock = Number(r.min_stock || 0);
+        const isLow = stock <= minStock;
+        tbody.innerHTML += `<tr>
+          <td>${esc(r.name)}</td>
+          <td>${esc(r.category || '-')}</td>
+          <td style="font-weight:600;color:${isLow ? 'var(--red)' : 'var(--text)'}">${stock}</td>
+          <td>${esc(r.unit || '個')}</td>
+          <td>¥${formatNum(r.unit_price || 0)}</td>
+          <td>${isLow ? '<span class="tag low">低庫存</span>' : '<span class="tag in">正常</span>'}</td>
+          <td><div class="row-actions">
+            <button onclick="openModal('inventory',${r.id})" title="編輯">✏️</button>
+            <button class="del" onclick="deleteRecord('inventory',${r.id})" title="刪除">🗑️</button>
+          </div></td>
+        </tr>`;
+      });
+    }
+    document.getElementById('invCount').textContent = res.total + ' 項';
+    renderPagination('invPagination', res.total, page, 'inventory');
+  } catch (e) {
+    toast('載入庫存失敗: ' + e.message, 'error');
+  }
+}
+
+// === Customers ===
+async function loadCustomers() {
+  const search = document.getElementById('custSearch').value.trim();
+  const page = currentPage.customers;
+  try {
+    const res = await api(`/api/customers?search=${encodeURIComponent(search)}&page=${page}&limit=${pageSize}`);
+    const tbody = document.getElementById('custBody');
+    tbody.innerHTML = '';
+    if (!res.data || res.data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">👥</div><p>暫無客戶資料</p><button class="btn btn-primary" onclick="openModal('customer')">新增客戶</button></div></td></tr>`;
+    } else {
+      res.data.forEach(r => {
+        tbody.innerHTML += `<tr>
+          <td>${esc(r.name)}</td>
+          <td>${esc(r.phone || '-')}</td>
+          <td>${esc(r.email || '-')}</td>
+          <td>${esc(r.address || '-')}</td>
+          <td>${esc(r.notes || '-')}</td>
+          <td><div class="row-actions">
+            <button onclick="openModal('customer',${r.id})" title="編輯">✏️</button>
+            <button class="del" onclick="deleteRecord('customers',${r.id})" title="刪除">🗑️</button>
+          </div></td>
+        </tr>`;
+      });
+    }
+    document.getElementById('custCount').textContent = res.total + ' 項';
+    renderPagination('custPagination', res.total, page, 'customers');
+  } catch (e) {
+    toast('載入客戶失敗: ' + e.message, 'error');
+  }
+}
+
+// === Transactions ===
+async function loadTransactions() {
+  const filter = document.getElementById('accFilter').value;
+  const page = currentPage.accounting;
+  try {
+    const res = await api(`/api/transactions?type=${filter}&page=${page}&limit=${pageSize}`);
+    const tbody = document.getElementById('accBody');
+    tbody.innerHTML = '';
+
+    // Month stats from dashboard endpoint
+    const dash = await api('/api/dashboard');
+    document.getElementById('accIncome').textContent = '¥' + formatNum(dash.income);
+    document.getElementById('accExpense').textContent = '¥' + formatNum(dash.expense);
+    document.getElementById('accBalance').textContent = '¥' + formatNum(dash.balance);
+
+    if (!res.data || res.data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">💰</div><p>暫無帳目</p><button class="btn btn-primary" onclick="openModal('transaction')">新增帳目</button></div></td></tr>`;
+    } else {
+      res.data.forEach(r => {
+        const isIncome = r.type === 'income';
+        tbody.innerHTML += `<tr>
+          <td>${fmtDate(r.tx_date || r.created_at)}</td>
+          <td><span class="tag ${isIncome ? 'in' : 'out'}">${isIncome ? '收入' : '支出'}</span></td>
+          <td>${esc(r.category || '-')}</td>
+          <td style="font-weight:600;color:${isIncome ? 'var(--red)' : 'var(--green)'}">${isIncome ? '+' : '-'}¥${formatNum(r.amount || 0)}</td>
+          <td>${esc(r.description || '-')}</td>
+          <td><div class="row-actions">
+            <button onclick="openModal('transaction',${r.id})" title="編輯">✏️</button>
+            <button class="del" onclick="deleteRecord('transactions',${r.id})" title="刪除">🗑️</button>
+          </div></td>
+        </tr>`;
+      });
+    }
+    document.getElementById('accCount').textContent = res.total + ' 筆';
+    renderPagination('accPagination', res.total, page, 'accounting');
+  } catch (e) {
+    toast('載入帳目失敗: ' + e.message, 'error');
+  }
+}
+
+// === Finance ===
+async function loadFinance() {
+  try {
+    const d = await api('/api/finance');
+    document.getElementById('finTotalIncome').textContent = '¥' + formatNum(d.totalIncome);
+    document.getElementById('finTotalExpense').textContent = '¥' + formatNum(d.totalExpense);
+    document.getElementById('finNetProfit').textContent = '¥' + formatNum(d.netProfit);
+
+    // 12-month chart
+    renderFinanceChart('finChart', d.trend);
+
+    // Category breakdown
+    const totalExp = (d.expenseByCategory || []).reduce((s, r) => s + r.total, 0) || 1;
+    const colors = ['var(--green)', 'var(--orange)', 'var(--purple)', 'var(--primary)', 'var(--red)', '#36cfc9', '#ff85c0', '#ffd666'];
+    const container = document.getElementById('finCategoryBreakdown');
+    container.innerHTML = '';
+    if (!d.expenseByCategory || d.expenseByCategory.length === 0) {
+      container.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:20px">暫無支出資料</div>';
+    } else {
+      d.expenseByCategory.forEach((r, i) => {
+        const pct = (r.total / totalExp * 100).toFixed(1);
+        container.innerHTML += `
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+              <span>${esc(r.category)}</span>
+              <span>¥${formatNum(r.total)} (${pct}%)</span>
+            </div>
+            <div style="background:var(--bg);border-radius:4px;height:8px;overflow:hidden">
+              <div style="background:${colors[i % colors.length]};height:100%;width:${pct}%"></div>
+            </div>
+          </div>`;
+      });
+    }
+  } catch (e) {
+    toast('載入財務概覽失敗: ' + e.message, 'error');
+  }
+}
+
+function renderFinanceChart(elementId, trendData) {
+  const now = new Date();
+  const chartData = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    const found = (trendData || []).find(r => r.month === key);
+    const inc = found ? found.income : 0;
+    const exp = found ? found.expense : 0;
+    chartData.push({ label: (d.getMonth()+1) + '月', income: inc, expense: exp, net: inc - exp });
+  }
+  const maxVal = Math.max(...chartData.map(d => Math.max(d.income, d.expense, Math.abs(d.net))), 1);
+  const container = document.getElementById(elementId);
+  container.innerHTML = '';
+  chartData.forEach(d => {
+    const incH = (d.income / maxVal) * 140;
+    const expH = (d.expense / maxVal) * 140;
+    const netH = (Math.abs(d.net) / maxVal) * 140;
+    container.innerHTML += `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+        <div class="chart-bar" style="background:var(--red);height:${incH}px;width:40%" title="收入 ¥${formatNum(d.income)}"></div>
+        <div class="chart-bar" style="background:var(--green);height:${expH}px;width:40%" title="支出 ¥${formatNum(d.expense)}"></div>
+        <div class="chart-bar" style="background:var(--primary);height:${netH}px;width:40%" title="淨利 ¥${formatNum(d.net)}"></div>
+        <div class="label">${d.label}</div>
+      </div>`;
+  });
+}
+
+// === Modal ===
+function openModal(type, id) {
+  editingType = type;
+  editingId = id || null;
+  const body = document.getElementById('modalBody');
+  const title = document.getElementById('modalTitle');
+
+  if (type === 'inventory') {
+    title.textContent = id ? '編輯商品' : '新增商品';
+    body.innerHTML = `
+      <div class="form-group"><label>商品名稱 *</label><input type="text" id="f_name" placeholder="例：咖啡豆"></div>
+      <div class="form-row">
+        <div class="form-group"><label>分類</label><select id="f_category">${INVENTORY_CATEGORIES.map(c => `<option>${c}</option>`).join('')}</select></div>
+        <div class="form-group"><label>單位</label><input type="text" id="f_unit" placeholder="例：包/箱/公斤" value="個"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>庫存數量</label><input type="number" id="f_stock" value="0" min="0"></div>
+        <div class="form-group"><label>最低庫存預警</label><input type="number" id="f_min_stock" value="0" min="0"></div>
+      </div>
+      <div class="form-group"><label>單價 (¥)</label><input type="number" id="f_unit_price" value="0" min="0" step="0.01"></div>
+    `;
+    if (id) loadRecordForEdit(type, id);
+  } else if (type === 'customer') {
+    title.textContent = id ? '編輯客戶' : '新增客戶';
+    body.innerHTML = `
+      <div class="form-group"><label>客戶名稱 *</label><input type="text" id="f_name" placeholder="例：王先生"></div>
+      <div class="form-row">
+        <div class="form-group"><label>電話</label><input type="text" id="f_phone" placeholder="09xx-xxx-xxx"></div>
+        <div class="form-group"><label>郵箱</label><input type="email" id="f_email" placeholder="customer@email.com"></div>
+      </div>
+      <div class="form-group"><label>地址</label><input type="text" id="f_address" placeholder="送貨地址"></div>
+      <div class="form-group"><label>備註</label><textarea id="f_notes" placeholder="特殊需求、偏好等"></textarea></div>
+    `;
+    if (id) loadRecordForEdit(type, id);
+  } else if (type === 'transaction') {
+    title.textContent = id ? '編輯帳目' : '新增帳目';
+    body.innerHTML = `
+      <div class="form-row">
+        <div class="form-group"><label>類型 *</label><select id="f_type" onchange="updateCategoryOptions()"><option value="income">收入</option><option value="expense">支出</option></select></div>
+        <div class="form-group"><label>金額 (¥) *</label><input type="number" id="f_amount" placeholder="0.00" min="0" step="0.01"></div>
+      </div>
+      <div class="form-group"><label>分類</label><select id="f_category"></select></div>
+      <div class="form-group"><label>日期</label><input type="date" id="f_tx_date"></div>
+      <div class="form-group"><label>說明</label><textarea id="f_description" placeholder="帳目說明"></textarea></div>
+    `;
+    updateCategoryOptions();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('f_tx_date').value = today;
+    if (id) loadRecordForEdit(type, id);
+  }
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function updateCategoryOptions() {
+  const type = document.getElementById('f_type').value;
+  const cats = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  document.getElementById('f_category').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
+}
+
+async function loadRecordForEdit(type, id) {
+  const endpoint = type === 'transaction' ? 'transactions' : type === 'inventory' ? 'inventory' : 'customers';
+  try {
+    const r = await api(`/api/${endpoint}/${id}`);
+    Object.keys(r).forEach(key => {
+      const el = document.getElementById('f_' + key);
+      if (el) el.value = r[key];
+    });
+    if (type === 'transaction') {
+      document.getElementById('f_type').value = r.type;
+      updateCategoryOptions();
+      document.getElementById('f_category').value = r.category;
+      if (r.tx_date) document.getElementById('f_tx_date').value = r.tx_date.split(' ')[0];
+    }
+  } catch (e) {
+    toast('載入資料失敗: ' + e.message, 'error');
+  }
+}
+
+async function saveModal() {
+  const type = editingType;
+  const endpoint = type === 'transaction' ? 'transactions' : type === 'inventory' ? 'inventory' : 'customers';
+
+  const fields = document.querySelectorAll('[id^="f_"]');
+  const record = {};
+  fields.forEach(f => {
+    const key = f.id.replace('f_', '');
+    if (f.type === 'number') record[key] = parseFloat(f.value) || 0;
+    else record[key] = f.value.trim();
+  });
+
+  if (!record.name && type !== 'transaction') { toast('請填寫名稱', 'error'); return; }
+  if (type === 'transaction' && (!record.amount || record.amount <= 0)) { toast('請填寫有效金額', 'error'); return; }
+
+  const saveBtn = document.getElementById('modalSave');
+  saveBtn.disabled = true;
+  saveBtn.textContent = '儲存中...';
+
+  try {
+    if (editingId) {
+      await api(`/api/${endpoint}/${editingId}`, { method: 'PUT', body: JSON.stringify(record) });
+      toast('更新成功', 'success');
+    } else {
+      await api(`/api/${endpoint}`, { method: 'POST', body: JSON.stringify(record) });
+      toast('新增成功', 'success');
+    }
+    closeModal();
+    if (type === 'inventory') loadInventory();
+    if (type === 'customer') loadCustomers();
+    if (type === 'transaction') loadTransactions();
+    loadDashboard();
+  } catch (e) {
+    toast('儲存失敗: ' + e.message, 'error');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '儲存';
+  }
+}
+
+async function deleteRecord(type, id) {
+  if (!confirm('確認刪除這筆資料？此操作不可撤銷。')) return;
+  const endpoint = type === 'transaction' ? 'transactions' : type === 'inventory' ? 'inventory' : 'customers';
+  try {
+    await api(`/api/${endpoint}/${id}`, { method: 'DELETE' });
+    toast('已刪除', 'success');
+    if (type === 'inventory') loadInventory();
+    if (type === 'customers') loadCustomers();
+    if (type === 'transactions') loadTransactions();
+    loadDashboard();
+  } catch (e) {
+    toast('刪除失敗: ' + e.message, 'error');
+  }
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  editingType = null;
+  editingId = null;
+}
+
+// === Pagination ===
+function renderPagination(containerId, total, page, section) {
+  const totalPages = Math.ceil((total || 0) / pageSize);
+  if (totalPages <= 1) { document.getElementById(containerId).innerHTML = ''; return; }
+  let html = '';
+  html += `<button onclick="goPage('${section}',${page - 1})" ${page <= 1 ? 'disabled' : ''}>上一頁</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - page) <= 2) {
+      html += `<button class="${i === page ? 'active' : ''}" onclick="goPage('${section}',${i})">${i}</button>`;
+    } else if (Math.abs(i - page) === 3) {
+      html += '<span style="color:var(--text-dim)">...</span>';
+    }
+  }
+  html += `<button onclick="goPage('${section}',${page + 1})" ${page >= totalPages ? 'disabled' : ''}>下一頁</button>`;
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function goPage(section, page) {
+  currentPage[section] = page;
+  if (section === 'inventory') loadInventory();
+  else if (section === 'customers') loadCustomers();
+  else if (section === 'accounting') loadTransactions();
+}
+
+// === Utils ===
+function formatNum(n) { return Number(n || 0).toLocaleString('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+function fmtDate(d) {
+  if (!d) return '-';
+  const dt = new Date(d.includes('T') ? d : d.replace(' ', 'T'));
+  return dt.toLocaleDateString('zh-TW') + ' ' + dt.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+}
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function toast(msg, type = 'info') {
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 200); }, 3000);
+}
+
+// === Init ===
+loadDashboard();
+</script>
+</body>
+</html>
