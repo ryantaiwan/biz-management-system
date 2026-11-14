@@ -7,14 +7,11 @@
     "start": "node server.js",
     "dev": "node server.js",
     "vercel-dev": "vercel dev",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "setup:local": "npm install && npm install better-sqlite3 express"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
     "cors": "^2.8.5"
-  },
-  "optionalDependencies": {
-    "better-sqlite3": "^11.3.0",
-    "express": "^4.21.0"
   }
 }
