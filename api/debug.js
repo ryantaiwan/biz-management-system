@@ -1,4 +1,4 @@
-const { USE_TURSO, query } = require('../lib/db');
+const { USE_TURSO, tursoHttp } = require('../lib/db');
 const { send, handleOptions } = require('../lib/helper');
 
 module.exports = async (req, res) => {
@@ -14,11 +14,12 @@ module.exports = async (req, res) => {
   };
 
   if (USE_TURSO) {
-    // Test actual query
+    // Test actual query using v2 pipeline API
     try {
-      const result = await query('SELECT 1 as test_val');
+      const result = await tursoHttp('SELECT 1 as test_val');
       debug.query_ok = true;
       debug.query_result = JSON.stringify(result);
+      debug.rows_count = result.rows ? result.rows.length : 0;
     } catch (e) {
       debug.query_ok = false;
       debug.query_error = e.message;
