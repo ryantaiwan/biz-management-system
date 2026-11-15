@@ -1,4 +1,4 @@
-const { USE_TURSO, tursoHttp } = require('../lib/db');
+const { USE_TURSO } = require('../lib/db');
 const { send, handleOptions } = require('../lib/helper');
 
 module.exports = async (req, res) => {
@@ -14,15 +14,48 @@ module.exports = async (req, res) => {
   };
 
   if (USE_TURSO) {
-    // Test actual query using v2 pipeline API
+    let url = process.env.TURSO_DATABASE_URL;
+    if (url.startsWith('libsql://')) url = 'https://' + url.substring(9);
+    url = url.replace(/\/$/, '') + '/v2/pipeline';
+
+    // Test 1: raw fetch to see exact response
     try {
-      const result = await tursoHttp('SELECT 1 as test_val');
-      debug.query_ok = true;
-      debug.query_result = JSON.stringify(result);
-      debug.rows_count = result.rows ? result.rows.length : 0;
+      const rawRes = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.TURSO_AUTH_TOKEN}`
+        },
+        body: JSON.stringify({
+          requests: [
+            { type: 'execute', stmt: { sql: 'SELECT COUNT(*) as total FROM inventory' } },
+            { type: 'close' }
+          ]
+        })
+      });
+
+      debug.http_status = rawRes.status;
+      debug.http_ok = rawRes.ok;
+      const rawText = await rawRes.text();
+      debug.raw_response = rawText.substring(0, 1000);
+      
+      // Try to parse and show structure
+      try {
+        const parsed = JSON.parse(rawText);
+        debug.parsed_keys = Object.keys(parsed);
+        if (parsed.results) {
+          debug.results_count = parsed.results.length;
+          if (parsed.results[0]) {
+            debug.result0_keys = Object.keys(parsed.results[0]);
+            debug.result0_cols = parsed.results[0].cols;
+            debug.result0_rows = JSON.stringify(parsed.results[0].rows).substring(0, 500);
+          }
+        }
+      } catch(e) {
+        debug.parse_error = e.message;
+      }
     } catch (e) {
-      debug.query_ok = false;
-      debug.query_error = e.message;
+      debug.fetch_error = e.message;
     }
   }
 
